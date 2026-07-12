@@ -7,7 +7,10 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "prebuild": "expo prebuild --clean"
+    "prebuild": "expo prebuild --clean",
+    "typecheck:example": "tsc --noEmit --project example",
+    "checks": "npm run format && npm run lint:fix && npm run typecheck && npm run typecheck:example && npm run lint:cycles && npm run test",
+    "checks:ci": "npm run format:check && npm run lint && npm run typecheck && npm run typecheck:example && npm run lint:cycles && npm run test"
   },
   "dependencies": {
     "@uwayss/tapedeck": "file:..",
