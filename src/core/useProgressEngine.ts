@@ -73,6 +73,17 @@ export const useProgressEngine = ({
   const [seenTracker] = useState(createSeenTracker);
   const lastIndexRef = useRef<number | null>(null);
 
+  /**
+   * Worklets can only schedule functions that live on the RN runtime. An inline arrow
+   * created inside the animation callback is defined on the UI runtime and throws —
+   * and closing over `advanceRef` would drag the ref object into the worklet, so every
+   * later write to `.current` would warn about mutating a serialized object. This
+   * stable indirection keeps the ref purely on the JS side.
+   */
+  const advance = useCallback(() => {
+    advanceRef.current();
+  }, []);
+
   const subscribeStatus = useCallback(
     (onStoreChange: () => void) => {
       if (!player) return () => {};
@@ -102,11 +113,11 @@ export const useProgressEngine = ({
           'worklet';
           // Advancing from the animation callback is what keeps the item boundary on
           // the UI thread's clock instead of a setTimeout the JS thread can starve.
-          if (finished) scheduleOnRN(() => advanceRef.current());
+          if (finished) scheduleOnRN(advance);
         },
       );
     },
-    [progress, totalMs],
+    [progress, totalMs, advance],
   );
 
   useEffect(() => {

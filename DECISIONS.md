@@ -63,6 +63,23 @@ the first time a user swipes. Every threshold a worklet needs is an **explicit
 argument**, passed by the caller. There's a test asserting the arity so it cannot
 regress.
 
+### `scheduleOnRN` only takes functions that live on the RN runtime
+
+`scheduleOnRN(() => somethingRef.current())` fails twice over:
+
+1. The arrow is *defined inside the worklet*, i.e. on the UI runtime, so it throws
+   `Locally defined function passed to scheduleOnRN`.
+2. Closing over `somethingRef` drags the **ref object itself** into the worklet's
+   serialized closure, so every later `somethingRef.current = ...` warns
+   `Tried to modify key 'current' of an object which has been already passed to a worklet`.
+
+The latest-callback-ref pattern is still right, but the worklet must schedule a
+**stable function defined in the component body** (`useCallback`) that reads the ref
+on the JS side. The ref never crosses the bridge. Same rule for gesture callbacks:
+pass `onPause`, not `() => onPause()`.
+
+None of this is caught by types, lint, or Jest — only by running it.
+
 ## expo-video — API facts that shape the design
 
 - **Time is in SECONDS, not milliseconds.** `player.currentTime` and
