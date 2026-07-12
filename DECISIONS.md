@@ -56,8 +56,19 @@ not work without it.
   component, and we want exactly 3 players owned by Root. With
   `createVideoPlayer` **we own `release()`** — Root must release all 3 on unmount
   or we leak native decoders.
-- `player.replace(source)` swaps the source on a live player synchronously.
-  This is the whole basis of the pool (§4.2) — no `<VideoView>` ever unmounts.
+- **Use `replaceAsync`, not `replace`.** `replace()` loads the asset synchronously
+  on the iOS main thread (it warns at runtime, and is documented as
+  deprecated-in-future). `replaceAsync` offloads the load; on Android and Web it's
+  equivalent. Swapping the source on a live player is the whole basis of the pool
+  (§4.2) — no `<VideoView>` ever unmounts.
+
+  Going async opens two races, which `core/pooledPlayer.ts` exists to close:
+  a slow load landing _after_ a newer one and leaving a slot on a stale source,
+  and `play()` firing while a load is still in flight, which would start the
+  _previous_ asset. Every replace takes a token; stale ones are dropped, and
+  playback/seeks queue behind the load they belong to. Pause applies immediately
+  as well as queued — stopping audio must never wait on the network.
+
 - Events (via `useEventListener` from the `expo` package, or
   `player.addListener`):
   - `statusChange` → `{ status, error?, oldStatus? }`,

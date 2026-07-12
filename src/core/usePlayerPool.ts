@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useVideoPlayer, type VideoPlayer } from 'expo-video';
 
 import { applyPoolPlan, planPool, POOL_SIZE } from './pool';
+import { PooledPlayer } from './pooledPlayer';
 import { type TapeItem } from './types';
 
 const setup = (player: VideoPlayer) => {
@@ -29,6 +30,10 @@ export const usePlayerPool = ({ items, index, muted, playing }: PoolOptions): Vi
 
   const players = useMemo(() => [first, second, third], [first, second, third]);
 
+  // The pool drives players through an adapter that serialises async source loads;
+  // the raw players still go to context, since the engine needs status/duration.
+  const pooled = useMemo(() => players.map((player) => new PooledPlayer(player)), [players]);
+
   const loadedRef = useRef<(string | null)[]>(new Array<string | null>(POOL_SIZE).fill(null));
   const lastCurrentIdRef = useRef<string | null>(null);
 
@@ -36,14 +41,14 @@ export const usePlayerPool = ({ items, index, muted, playing }: PoolOptions): Vi
     const currentId = items[index]?.id ?? null;
     const plans = planPool(index, items, loadedRef.current);
 
-    loadedRef.current = applyPoolPlan(players, plans, loadedRef.current, {
+    loadedRef.current = applyPoolPlan(pooled, plans, loadedRef.current, {
       muted,
       playing,
       restartCurrent: currentId !== lastCurrentIdRef.current,
     });
 
     lastCurrentIdRef.current = currentId;
-  }, [index, items, players, muted, playing]);
+  }, [index, items, pooled, muted, playing]);
 
   return players;
 };
