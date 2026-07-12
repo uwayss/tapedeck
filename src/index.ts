@@ -1,4 +1,5 @@
 import { Footer, Header } from './components/Chrome';
+import { MuteButton } from './components/MuteButton';
 import { Progress } from './components/Progress';
 import { Viewport } from './components/Viewport';
 import { TapeDeckRoot } from './core/TapeDeckRoot';
@@ -6,6 +7,7 @@ import { TapeDeckRoot } from './core/TapeDeckRoot';
 export * from './core';
 
 export { Footer, Header, type ChromeSlotProps } from './components/Chrome';
+export { MuteButton, type MuteButtonProps } from './components/MuteButton';
 export { Progress, type ProgressProps } from './components/Progress';
 export { Viewport, type ViewportProps } from './components/Viewport';
 export { useTapeDeck, type UseTapeDeck } from './hooks/useTapeDeck';
@@ -18,4 +20,5 @@ export const TapeDeck = {
   Progress,
   Header,
   Footer,
+  MuteButton,
 };

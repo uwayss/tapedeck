@@ -3,6 +3,7 @@ import { VideoView, type VideoContentFit } from 'expo-video';
 
 import { useTapeDeckContext } from '../core/context';
 import { slotForItemIndex } from '../core/pool';
+import { TapeImage } from './imageLoader';
 
 export interface ViewportProps {
   contentFit?: VideoContentFit;
@@ -10,8 +11,13 @@ export interface ViewportProps {
 }
 
 export const Viewport = ({ contentFit = 'cover', style }: ViewportProps) => {
-  const { players, index } = useTapeDeckContext();
+  const { players, index, item, isBuffering } = useTapeDeckContext();
   const currentSlot = slotForItemIndex(index);
+
+  const isImage = item?.type === 'image';
+  // Hold the poster up until the video actually has a frame to show. Without this the
+  // surface is black for as long as the first segment takes to load.
+  const poster = item?.type === 'video' && isBuffering ? item.poster : undefined;
 
   return (
     <View style={[styles.container, style]}>
@@ -21,12 +27,34 @@ export const Viewport = ({ contentFit = 'cover', style }: ViewportProps) => {
         <VideoView
           key={slot}
           player={player}
-          style={[StyleSheet.absoluteFill, slot === currentSlot ? styles.visible : styles.hidden]}
+          style={[
+            StyleSheet.absoluteFill,
+            slot === currentSlot && !isImage ? styles.visible : styles.hidden,
+          ]}
           contentFit={contentFit}
           nativeControls={false}
           pointerEvents="none"
         />
       ))}
+
+      {poster ? (
+        <TapeImage
+          source={poster}
+          style={StyleSheet.absoluteFill}
+          contentFit={contentFit}
+          pointerEvents="none"
+        />
+      ) : null}
+
+      {isImage ? (
+        <TapeImage
+          source={item.source}
+          style={StyleSheet.absoluteFill}
+          contentFit={contentFit}
+          transition={150}
+          pointerEvents="none"
+        />
+      ) : null}
     </View>
   );
 };
