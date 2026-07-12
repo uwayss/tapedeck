@@ -1,9 +1,11 @@
+import { Footer, Header } from './components/Chrome';
 import { Progress } from './components/Progress';
 import { Viewport } from './components/Viewport';
 import { TapeDeckRoot } from './core/TapeDeckRoot';
 
 export * from './core';
 
+export { Footer, Header, type ChromeSlotProps } from './components/Chrome';
 export { Progress, type ProgressProps } from './components/Progress';
 export { Viewport, type ViewportProps } from './components/Viewport';
 export { useTapeDeck, type UseTapeDeck } from './hooks/useTapeDeck';
@@ -14,4 +16,6 @@ export const TapeDeck = {
   Root: TapeDeckRoot,
   Viewport,
   Progress,
+  Header,
+  Footer,
 };

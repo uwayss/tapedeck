@@ -25,6 +25,9 @@ export interface TapeDeckContextValue {
   /** 0→1 for the current item. Lives on the UI thread; reading it never re-renders. */
   progress: SharedValue<number>;
 
+  /** Fades to 0 while held. Chrome slots consume it; nothing re-renders. */
+  chromeOpacity: SharedValue<number>;
+
   /** Three players, addressed by slot. Never re-created, never released mid-session. */
   players: VideoPlayer[];
 }

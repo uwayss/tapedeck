@@ -13,6 +13,19 @@ export {
   type SlotPlan,
 } from './pool';
 export {
+  DEFAULT_DISMISS_THRESHOLD,
+  DEFAULT_HOLD_DELAY,
+  DEFAULT_TAP_ZONES,
+  DISMISS_VELOCITY,
+  resolveTapZone,
+  rubberBand,
+  scaleForDismiss,
+  shouldDismiss,
+  type TapZone,
+} from './gestures';
+export { PooledPlayer, type AsyncPlayer } from './pooledPlayer';
+export { useTapeGestures, type TapeGestures } from './useTapeGestures';
+export {
   clamp01,
   createSeenTracker,
   driftMs,

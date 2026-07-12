@@ -1,4 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AppState, BackHandler, Platform, StyleSheet, type LayoutChangeEvent } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 
 import { TapeDeckContext, type TapeDeckContextValue } from './context';
 import { DEFAULT_DURATION, msToSeconds } from './duration';
@@ -8,6 +11,7 @@ import { clamp01 } from './progress';
 import { type TapeDeckRootProps } from './types';
 import { usePlayerPool } from './usePlayerPool';
 import { useProgressEngine } from './useProgressEngine';
+import { useTapeGestures } from './useTapeGestures';
 
 export const TapeDeckRoot = ({
   items,
@@ -21,6 +25,11 @@ export const TapeDeckRoot = ({
   onRequestClose,
   onPrevThread,
   onItemSeen,
+  onDoubleTap,
+  tapZones,
+  holdDelay,
+  hideChromeOnHold,
+  dismissThreshold,
   children,
 }: TapeDeckRootProps) => {
   const [index, setIndex] = useState(() => clampIndex(initialIndex, items.length));
@@ -95,6 +104,50 @@ export const TapeDeckRoot = ({
 
   const close = useCallback(() => onRequestClose?.(), [onRequestClose]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !onRequestClose) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onRequestClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onRequestClose]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      // Coming back from the background does not auto-resume: the consumer may have
+      // paused deliberately, and we cannot tell the two apart.
+      if (state !== 'active') setIsPaused(true);
+    });
+    return () => sub.remove();
+  }, []);
+
+  const { gesture, width, height, chromeOpacity, containerStyle } = useTapeGestures({
+    progress,
+    item,
+    index,
+    tapZones,
+    holdDelay,
+    hideChromeOnHold,
+    dismissThreshold,
+    onNext: next,
+    onPrev: prev,
+    onPause: pause,
+    onPlay: play,
+    onClose: close,
+    onDoubleTap,
+  });
+
+  const onLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      // Straight into shared values — the tap-zone worklet needs the width, and React
+      // does not.
+      width.value = event.nativeEvent.layout.width;
+      height.value = event.nativeEvent.layout.height;
+    },
+    [width, height],
+  );
+
   const value = useMemo<TapeDeckContextValue>(
     () => ({
       items,
@@ -112,6 +165,7 @@ export const TapeDeckRoot = ({
       seek,
       close,
       progress,
+      chromeOpacity,
       players,
     }),
     [
@@ -130,9 +184,25 @@ export const TapeDeckRoot = ({
       seek,
       close,
       progress,
+      chromeOpacity,
       players,
     ],
   );
 
-  return <TapeDeckContext.Provider value={value}>{children}</TapeDeckContext.Provider>;
+  return (
+    <TapeDeckContext.Provider value={value}>
+      <GestureDetector gesture={gesture}>
+        <Animated.View style={[styles.container, containerStyle]} onLayout={onLayout}>
+          {children}
+        </Animated.View>
+      </GestureDetector>
+    </TapeDeckContext.Provider>
+  );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+});

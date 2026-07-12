@@ -1,22 +1,17 @@
+import { useCallback, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { TapeDeck, useTapeDeck } from '@uwayss/tapedeck';
+import { TapeDeck, useTapeDeck, type TapeItem } from '@uwayss/tapedeck';
 
 import { VIDEO_ITEMS } from './src/items';
 
-const Button = ({ label, onPress }: { label: string; onPress: () => void }) => (
-  <Pressable style={styles.button} onPress={onPress}>
-    <Text style={styles.buttonLabel}>{label}</Text>
-  </Pressable>
-);
-
 /**
- * M2 acceptance test. Blocks the JS thread solid for 2s. The progress bar runs on
- * the UI thread, so it must keep filling perfectly smoothly while this is stuck —
- * any stutter means progress leaked back into React.
+ * M2 acceptance test. Blocks the JS thread solid for 2s. Progress, hold-to-pause and
+ * the dismiss drag all run on the UI thread, so they must stay perfectly smooth while
+ * this is stuck — any stutter means something leaked back into React.
  */
 const jamJsThread = () => {
   const until = Date.now() + 2000;
@@ -25,44 +20,68 @@ const jamJsThread = () => {
 };
 
 const Chrome = () => {
-  const { index, item, next, prev, isPaused, pause, play, isMuted, toggleMute, isBuffering } =
-    useTapeDeck();
-  const insets = useSafeAreaInsets();
+  const { index, item, isMuted, toggleMute, isBuffering, isPaused } = useTapeDeck();
 
   return (
     <>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <TapeDeck.Header style={styles.header}>
         <TapeDeck.Progress />
-        <Text style={styles.readout}>
-          {index + 1} / {VIDEO_ITEMS.length} · {item?.id}
-          {isBuffering ? ' · buffering' : ''}
-        </Text>
-      </View>
-
-      <View style={[styles.controls, { paddingBottom: insets.bottom + 16 }]}>
-        <Button label="Jam JS 2s" onPress={jamJsThread} />
-        <View style={styles.row}>
-          <Button label="Prev" onPress={prev} />
-          <Button label={isPaused ? 'Play' : 'Pause'} onPress={isPaused ? play : pause} />
-          <Button label={isMuted ? 'Unmute' : 'Mute'} onPress={toggleMute} />
-          <Button label="Next" onPress={next} />
+        <View style={styles.headerRow}>
+          <Text style={styles.readout}>
+            {index + 1} / {VIDEO_ITEMS.length} · {item?.id}
+            {isBuffering ? ' · buffering' : ''}
+            {isPaused ? ' · held' : ''}
+          </Text>
+          <Pressable onPress={toggleMute} hitSlop={12}>
+            <Text style={styles.mute}>{isMuted ? '🔇' : '🔊'}</Text>
+          </Pressable>
         </View>
-      </View>
+      </TapeDeck.Header>
+
+      <TapeDeck.Footer style={styles.footer}>
+        <Pressable style={styles.button} onPress={jamJsThread}>
+          <Text style={styles.buttonLabel}>Jam JS thread 2s</Text>
+        </Pressable>
+        <Text style={styles.hint}>
+          tap sides · hold to pause · swipe down to dismiss · double-tap to react
+        </Text>
+      </TapeDeck.Footer>
     </>
   );
 };
 
 export default function App() {
+  const [closed, setClosed] = useState(false);
+
+  const onDoubleTap = useCallback((item: TapeItem) => {
+    Alert.alert('❤️', `reacted to ${item.id}`);
+  }, []);
+
+  if (closed) {
+    return (
+      <View style={styles.closed}>
+        <Pressable onPress={() => setClosed(false)}>
+          <Text style={styles.reopen}>dismissed — tap to reopen</Text>
+        </Pressable>
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={styles.fill}>
       <SafeAreaProvider>
-        <View style={styles.fill}>
-          <TapeDeck.Root items={VIDEO_ITEMS} defaultMuted>
-            <TapeDeck.Viewport contentFit="cover" />
-            <Chrome />
-          </TapeDeck.Root>
-          <StatusBar style="light" />
-        </View>
+        <TapeDeck.Root
+          items={VIDEO_ITEMS}
+          defaultMuted
+          onRequestClose={() => setClosed(true)}
+          onComplete={() => setClosed(true)}
+          onDoubleTap={onDoubleTap}
+          onItemSeen={(item) => console.log('seen', item.id)}>
+          <TapeDeck.Viewport contentFit="cover" />
+          <Chrome />
+        </TapeDeck.Root>
+        <StatusBar style="light" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -70,31 +89,32 @@ export default function App() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: '#000' },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 12,
-    gap: 8,
+  closed: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#111',
   },
-  controls: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 16,
-    gap: 8,
+  reopen: { color: '#fff', fontSize: 16 },
+  header: { paddingHorizontal: 12, gap: 10 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  footer: { paddingHorizontal: 16, paddingBottom: 12, gap: 10 },
   readout: {
     color: '#fff',
     fontSize: 13,
     fontVariant: ['tabular-nums'],
+  },
+  mute: { fontSize: 20 },
+  hint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
     textAlign: 'center',
   },
-  row: { flexDirection: 'row', gap: 8 },
   button: {
-    flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
