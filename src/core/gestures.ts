@@ -42,12 +42,18 @@ export const scaleForDismiss = (translationY: number, height: number): number =>
   return 1 - ratio * DISMISS_SCALE;
 };
 
-/** Distance OR speed — a fast flick should dismiss without crossing the threshold. */
+/**
+ * Distance OR speed — a fast flick should dismiss without crossing the threshold.
+ *
+ * Both thresholds are required rather than defaulted: the worklet plugin does not
+ * capture identifiers used in default parameter values, so a module constant used
+ * as a default is simply undefined on the UI thread.
+ */
 export const shouldDismiss = (
   translationY: number,
   velocityY: number,
-  threshold: number = DEFAULT_DISMISS_THRESHOLD,
-  dismissVelocity: number = DISMISS_VELOCITY,
+  threshold: number,
+  dismissVelocity: number,
 ): boolean => {
   'worklet';
   if (translationY <= 0) return false;

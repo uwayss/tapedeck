@@ -44,6 +44,25 @@ Consequences:
 we call `scheduleOnRN` directly. It is not an optional extra — Reanimated 4 does
 not work without it.
 
+### Worklets do not capture default parameter values
+
+A `'worklet'` function may reference module constants **in its body** — the plugin
+captures those into the closure. It does **not** capture identifiers used in a
+**default parameter value**. This:
+
+```ts
+export const shouldDismiss = (dy: number, vy: number, v = DISMISS_VELOCITY) => {
+  'worklet';
+  ...
+};
+```
+
+typechecks, lints, passes every Jest test (JS evaluates the default fine), and then
+throws `ReferenceError: Property 'DISMISS_VELOCITY' doesn't exist` on the UI thread
+the first time a user swipes. Every threshold a worklet needs is an **explicit
+argument**, passed by the caller. There's a test asserting the arity so it cannot
+regress.
+
 ## expo-video — API facts that shape the design
 
 - **Time is in SECONDS, not milliseconds.** `player.currentTime` and

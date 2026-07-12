@@ -14,6 +14,7 @@ import {
   DEFAULT_DISMISS_THRESHOLD,
   DEFAULT_HOLD_DELAY,
   DEFAULT_TAP_ZONES,
+  DISMISS_VELOCITY,
   resolveTapZone,
   rubberBand,
   scaleForDismiss,
@@ -128,7 +129,9 @@ export const useTapeGestures = ({
       })
       .onEnd((event) => {
         'worklet';
-        if (shouldDismiss(event.translationY, event.velocityY, dismissThreshold)) {
+        if (
+          shouldDismiss(event.translationY, event.velocityY, dismissThreshold, DISMISS_VELOCITY)
+        ) {
           scheduleOnRN(onClose);
           return;
         }

@@ -1,6 +1,7 @@
 import {
   DEFAULT_DISMISS_THRESHOLD,
   DEFAULT_TAP_ZONES,
+  DISMISS_VELOCITY,
   resolveTapZone,
   rubberBand,
   scaleForDismiss,
@@ -64,23 +65,36 @@ describe('scaleForDismiss', () => {
 });
 
 describe('shouldDismiss', () => {
+  const dismiss = (
+    translationY: number,
+    velocityY: number,
+    threshold = DEFAULT_DISMISS_THRESHOLD,
+  ) => shouldDismiss(translationY, velocityY, threshold, DISMISS_VELOCITY);
+
   it('dismisses past the distance threshold', () => {
-    expect(shouldDismiss(DEFAULT_DISMISS_THRESHOLD + 1, 0)).toBe(true);
-    expect(shouldDismiss(DEFAULT_DISMISS_THRESHOLD, 0)).toBe(false);
-    expect(shouldDismiss(20, 0)).toBe(false);
+    expect(dismiss(DEFAULT_DISMISS_THRESHOLD + 1, 0)).toBe(true);
+    expect(dismiss(DEFAULT_DISMISS_THRESHOLD, 0)).toBe(false);
+    expect(dismiss(20, 0)).toBe(false);
   });
 
   it('dismisses on a fast flick that never travelled far', () => {
-    expect(shouldDismiss(20, 1200)).toBe(true);
-    expect(shouldDismiss(20, 200)).toBe(false);
+    expect(dismiss(20, 1200)).toBe(true);
+    expect(dismiss(20, 200)).toBe(false);
   });
 
   it('never dismisses on an upward drag, however fast', () => {
-    expect(shouldDismiss(-200, 5000)).toBe(false);
+    expect(dismiss(-200, 5000)).toBe(false);
   });
 
   it('honours a custom threshold', () => {
-    expect(shouldDismiss(60, 0, 50)).toBe(true);
-    expect(shouldDismiss(60, 0, 300)).toBe(false);
+    expect(dismiss(60, 0, 50)).toBe(true);
+    expect(dismiss(60, 0, 300)).toBe(false);
+  });
+
+  it('takes both thresholds explicitly, never from a default parameter', () => {
+    // Regression: the worklet plugin does not capture identifiers used in default
+    // parameter values, so a defaulted module constant is undefined on the UI thread
+    // and the gesture throws mid-swipe. Every threshold must be an explicit argument.
+    expect(shouldDismiss).toHaveLength(4);
   });
 });
