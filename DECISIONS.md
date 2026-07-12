@@ -114,8 +114,32 @@ recorded so we don't re-litigate them:
   (`expo-asset`) inside `node_modules/expo/node_modules/`, which
   `disableHierarchicalLookup = true` (the usual monorepo advice) makes invisible.
 
-## Open items
+## Progress engine (§4.3)
 
-- Whether `runOnJS` is still re-exported from `react-native-reanimated` as a
-  deprecated alias is unconfirmed by docs. We use `scheduleOnRN` from
-  `react-native-worklets` regardless — it's the documented path.
+- `VideoPlayer extends SharedObject`, so `player.addListener(event, cb)` works
+  directly and returns a subscription with `.remove()`. We do **not** need `expo`
+  itself as a peer for `useEvent`/`useEventListener`.
+- Drift correction rides the `timeUpdate` event, whose frequency is set by
+  `player.timeUpdateEventInterval` (**seconds**). We set it to 1 while an item is
+  current and back to 0 when it isn't, so no player emits time we don't read.
+- Player status is read with `useSyncExternalStore`, not `useState` + an effect.
+  The pool re-points `current` at a different player on every index change, and
+  `useSyncExternalStore`'s snapshot re-reads `player.status` for whichever player
+  is current — with `useState` we'd need a `setState` in an effect, which
+  `react-hooks/set-state-in-effect` (correctly) forbids.
+- `runOnJS` **is** still exported by Reanimated 4 (closes the open item below),
+  but `scheduleOnRN` from `react-native-worklets` is the documented path and is
+  what we use.
+
+### `react-hooks/immutability` is off, deliberately
+
+`eslint-plugin-react-hooks@7` bundles the React Compiler rules. `immutability`
+forbids mutating anything reached through a hook argument — which is precisely
+what Reanimated shared values (`progress.value = withTiming(...)`) and expo-video
+players (`player.timeUpdateEventInterval = 1`) exist for. Those mutations are how
+progress stays off the JS thread; the rule cannot tell them apart from an
+accidental prop mutation, and this library is built out of them.
+
+`rules-of-hooks` and `exhaustive-deps` remain **errors** per the brief, and
+`refs`, `purity`, and `set-state-in-effect` stay on — they caught two real bugs
+here (a ref written during render, and a would-be `setState` in an effect).

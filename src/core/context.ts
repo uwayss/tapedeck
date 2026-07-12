@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import { type VideoPlayer } from 'expo-video';
+import { type SharedValue } from 'react-native-reanimated';
 
 import { type TapeItem } from './types';
 
@@ -10,6 +11,7 @@ export interface TapeDeckContextValue {
 
   isPaused: boolean;
   isMuted: boolean;
+  isBuffering: boolean;
 
   next: () => void;
   prev: () => void;
@@ -17,7 +19,11 @@ export interface TapeDeckContextValue {
   play: () => void;
   toggleMute: () => void;
   setMuted: (muted: boolean) => void;
+  seek: (ms: number) => void;
   close: () => void;
+
+  /** 0→1 for the current item. Lives on the UI thread; reading it never re-renders. */
+  progress: SharedValue<number>;
 
   /** Three players, addressed by slot. Never re-created, never released mid-session. */
   players: VideoPlayer[];

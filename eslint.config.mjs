@@ -41,6 +41,15 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
 
+      // The React Compiler forbids mutating anything reached through a hook argument.
+      // Reanimated shared values (`progress.value = ...`) and expo-video players
+      // (`player.timeUpdateEventInterval = ...`) are imperative handles whose entire
+      // purpose is to be mutated off the render path — that's what keeps progress off
+      // the JS thread. The rule cannot distinguish those from an accidental prop
+      // mutation, and this library is made of them. `refs`, `purity`, and
+      // `set-state-in-effect` stay on: those catch real concurrency bugs.
+      'react-hooks/immutability': 'off',
+
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

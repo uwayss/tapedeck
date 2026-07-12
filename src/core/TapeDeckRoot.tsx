@@ -1,9 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { TapeDeckContext, type TapeDeckContextValue } from './context';
+import { DEFAULT_DURATION, msToSeconds } from './duration';
 import { clampIndex, nextIndex, prevIndex } from './navigation';
+import { slotForItemIndex } from './pool';
+import { clamp01 } from './progress';
 import { type TapeDeckRootProps } from './types';
 import { usePlayerPool } from './usePlayerPool';
+import { useProgressEngine } from './useProgressEngine';
 
 export const TapeDeckRoot = ({
   items,
@@ -11,10 +15,12 @@ export const TapeDeckRoot = ({
   muted,
   defaultMuted = false,
   onMutedChange,
+  defaultDuration = DEFAULT_DURATION,
   onIndexChange,
   onComplete,
   onRequestClose,
   onPrevThread,
+  onItemSeen,
   children,
 }: TapeDeckRootProps) => {
   const [index, setIndex] = useState(() => clampIndex(initialIndex, items.length));
@@ -24,6 +30,8 @@ export const TapeDeckRoot = ({
   const isMuted = muted ?? uncontrolledMuted;
 
   const players = usePlayerPool({ items, index, muted: isMuted, playing: !isPaused });
+  const item = items[index];
+  const currentPlayer = players[slotForItemIndex(index)];
 
   const goTo = useCallback(
     (target: number) => {
@@ -51,8 +59,29 @@ export const TapeDeckRoot = ({
     goTo(target);
   }, [index, goTo, onPrevThread]);
 
+  const { progress, isBuffering, totalMs } = useProgressEngine({
+    item,
+    index,
+    player: currentPlayer,
+    isPaused,
+    defaultDuration,
+    onAdvance: next,
+    onItemSeen,
+  });
+
   const pause = useCallback(() => setIsPaused(true), []);
   const play = useCallback(() => setIsPaused(false), []);
+
+  const seek = useCallback(
+    (ms: number) => {
+      const target = clamp01(totalMs <= 0 ? 0 : ms / totalMs);
+      progress.value = target;
+      if (item?.type === 'video' && currentPlayer) {
+        currentPlayer.currentTime = msToSeconds(target * totalMs);
+      }
+    },
+    [totalMs, progress, item, currentPlayer],
+  );
 
   const setMuted = useCallback(
     (value: boolean) => {
@@ -70,30 +99,37 @@ export const TapeDeckRoot = ({
     () => ({
       items,
       index,
-      item: items[index],
+      item,
       isPaused,
       isMuted,
+      isBuffering,
       next,
       prev,
       pause,
       play,
       toggleMute,
       setMuted,
+      seek,
       close,
+      progress,
       players,
     }),
     [
       items,
       index,
+      item,
       isPaused,
       isMuted,
+      isBuffering,
       next,
       prev,
       pause,
       play,
       toggleMute,
       setMuted,
+      seek,
       close,
+      progress,
       players,
     ],
   );

@@ -13,23 +13,42 @@ const Button = ({ label, onPress }: { label: string; onPress: () => void }) => (
   </Pressable>
 );
 
-/** M1 harness: manual next/prev. Gestures land in M3. */
-const Controls = () => {
-  const { index, item, next, prev, isPaused, pause, play, isMuted, toggleMute } = useTapeDeck();
+/**
+ * M2 acceptance test. Blocks the JS thread solid for 2s. The progress bar runs on
+ * the UI thread, so it must keep filling perfectly smoothly while this is stuck —
+ * any stutter means progress leaked back into React.
+ */
+const jamJsThread = () => {
+  const until = Date.now() + 2000;
+  // eslint-disable-next-line no-empty
+  while (Date.now() < until) {}
+};
+
+const Chrome = () => {
+  const { index, item, next, prev, isPaused, pause, play, isMuted, toggleMute, isBuffering } =
+    useTapeDeck();
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.controls, { paddingBottom: insets.bottom + 16 }]}>
-      <Text style={styles.readout}>
-        {index + 1} / {VIDEO_ITEMS.length} · {item?.id}
-      </Text>
-      <View style={styles.row}>
-        <Button label="Prev" onPress={prev} />
-        <Button label={isPaused ? 'Play' : 'Pause'} onPress={isPaused ? play : pause} />
-        <Button label={isMuted ? 'Unmute' : 'Mute'} onPress={toggleMute} />
-        <Button label="Next" onPress={next} />
+    <>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <TapeDeck.Progress />
+        <Text style={styles.readout}>
+          {index + 1} / {VIDEO_ITEMS.length} · {item?.id}
+          {isBuffering ? ' · buffering' : ''}
+        </Text>
       </View>
-    </View>
+
+      <View style={[styles.controls, { paddingBottom: insets.bottom + 16 }]}>
+        <Button label="Jam JS 2s" onPress={jamJsThread} />
+        <View style={styles.row}>
+          <Button label="Prev" onPress={prev} />
+          <Button label={isPaused ? 'Play' : 'Pause'} onPress={isPaused ? play : pause} />
+          <Button label={isMuted ? 'Unmute' : 'Mute'} onPress={toggleMute} />
+          <Button label="Next" onPress={next} />
+        </View>
+      </View>
+    </>
   );
 };
 
@@ -40,7 +59,7 @@ export default function App() {
         <View style={styles.fill}>
           <TapeDeck.Root items={VIDEO_ITEMS} defaultMuted>
             <TapeDeck.Viewport contentFit="cover" />
-            <Controls />
+            <Chrome />
           </TapeDeck.Root>
           <StatusBar style="light" />
         </View>
@@ -51,13 +70,21 @@ export default function App() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: '#000' },
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
   controls: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    gap: 12,
+    gap: 8,
   },
   readout: {
     color: '#fff',

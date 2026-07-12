@@ -12,7 +12,20 @@ export {
   type PoolRole,
   type SlotPlan,
 } from './pool';
+export {
+  clamp01,
+  createSeenTracker,
+  driftMs,
+  DRIFT_CHECK_INTERVAL_S,
+  DRIFT_THRESHOLD_MS,
+  exceedsDrift,
+  progressForPlayerTime,
+  remainingMs,
+  SEEN_AT,
+  type SeenTracker,
+} from './progress';
 export { TapeDeckRoot } from './TapeDeckRoot';
+export { useProgressEngine, type ProgressEngine } from './useProgressEngine';
 export type {
   TapeDeckRootProps,
   TapeImageItem,
