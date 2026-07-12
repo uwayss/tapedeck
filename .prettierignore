@@ -1,0 +1,11 @@
+node_modules/
+lib/
+coverage/
+example/.expo/
+example/android/
+example/ios/
+package-lock.json
+CHANGELOG.md
+
+# Source of truth. Not ours to reformat.
+SPEC.md
